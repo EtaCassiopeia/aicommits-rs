@@ -1,6 +1,6 @@
 [package]
 name = "aicommits-rs"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Mohsen Zainalpour <zainalpour@gmail.com>"]
 license = "MIT"
 description = "A CLI that writes your git commit messages for you with AI"
