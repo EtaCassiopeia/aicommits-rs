@@ -3,7 +3,9 @@ aicommits-rs
 
 [![Build Status](https://travis-ci.org/andrewthauer/aicommits-rs.svg?branch=master)](https://travis-ci.org/andrewthauer/aicommits-rs)
 
-A CLI that writes your git commit messages for you with AI.
+A CLI that writes your git commit messages for you with AI. This project was inspired by [AI Commits](https://github.com/Nutlope/aicommits) and has been ported to Rust.
+
+We were inspired by the AI Commits project and have ported it to Rust. We hope to build on its success and take this project even further.
 
 [![asciicast](https://asciinema.org/a/OgAALBPROYiY01EtJ9Ovuj5ty.svg)](https://asciinema.org/a/OgAALBPROYiY01EtJ9Ovuj5ty)
 
