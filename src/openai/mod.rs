@@ -162,7 +162,7 @@ async fn create_completion(
         frequency_penalty: 0.0,
         presence_penalty: 0.0,
         stream: false,
-        n: 1,
+        n: 2,
     };
 
     let completion: CompletionResponse = complete_prompt(async_client, completion_request).await?;
@@ -190,5 +190,6 @@ pub async fn generate_commit_message(
     let completion: CompletionResponse = create_completion(async_client, prompt).await?;
 
     let message: String = sanitize_message(&completion.choices[0].text);
+    println!("Generated commit message: {}", message);
     Ok(message)
 }
