@@ -9,8 +9,8 @@ use ansi_term::Colour::Cyan;
 use ansi_term::Colour::Green;
 use ansi_term::Colour::Purple;
 use ansi_term::Colour::Red;
-use dialoguer::Confirm;
 use dialoguer::theme::ColorfulTheme;
+use dialoguer::Confirm;
 
 use config::Config;
 

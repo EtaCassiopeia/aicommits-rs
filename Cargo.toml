@@ -7,7 +7,7 @@ description = "A CLI that writes your git commit messages for you with AI"
 readme = "README.md"
 homepage = "https://github.com/EtaCassiopeia/aicommits-rs"
 repository = "https://github.com/EtaCassiopeia/aicommits-rs"
-keywords = ["cli", "openai", "git", "commit", "message", "ai"]
+keywords = ["cli", "openai", "git", "commit", "ai"]
 categories = ["command-line-utilities"]
 edition = "2021"
 
