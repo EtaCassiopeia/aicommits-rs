@@ -23,7 +23,7 @@ fn handle_error<T>(result: Result<T, Box<dyn Error>>) -> T {
         Ok(value) => value,
         Err(err) => {
             eprintln!(
-                "\n\n{} Application error: {}",
+                "\n\n{} {}",
                 Red.bold().paint("✘"),
                 Purple.bold().paint(err.to_string())
             );
