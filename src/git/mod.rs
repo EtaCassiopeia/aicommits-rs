@@ -38,9 +38,9 @@ pub fn get_staged_files() -> Result<Vec<String>, Box<dyn Error>> {
     Ok(files)
 }
 
-pub fn get_detected_message(files: Vec<String>) -> String {
+pub fn get_detected_message(files: &Vec<String>) -> String {
     format!(
-        "Detected {} staged file{}",
+        "Detected {} staged file{}:",
         files.len().to_string(),
         if files.len() > 1 { "s" } else { "" }
     )
