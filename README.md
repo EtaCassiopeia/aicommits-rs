@@ -1,7 +1,8 @@
 # aicommits-rs
-------------
+----------------
 
 [![Crate Status](https://img.shields.io/crates/v/aicommits-rs.svg)](https://crates.io/crates/aicommits-rs)
+[![Build Status](https://github.com/EtaCassiopeia/aicommits-rs/actions/workflows/build.yml/badge.svg)]()
 [![Docs Status](https://docs.rs/aicommits-rs/badge.svg)](https://docs.rs/crate/aicommits-rs/)
 
 A CLI that writes your git commit messages for you with AI. This project was inspired by [AI Commits](https://github.com/Nutlope/aicommits) and has been ported to Rust.

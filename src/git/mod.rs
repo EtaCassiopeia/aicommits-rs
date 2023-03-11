@@ -26,7 +26,7 @@ pub fn get_staged_files() -> Result<Vec<String>, Box<dyn Error>> {
         .output()
         .expect("failed to execute process");
 
-    if output.stdout.len() == 0 {
+    if output.stdout.is_empty() {
         return Err(
             "No staged changes found. Make sure to stage your changes with `git add`.".into(),
         );
@@ -41,7 +41,7 @@ pub fn get_staged_files() -> Result<Vec<String>, Box<dyn Error>> {
 pub fn get_detected_message(files: &Vec<String>) -> String {
     format!(
         "Detected {} staged file{}:",
-        files.len().to_string(),
+        files.len(),
         if files.len() > 1 { "s" } else { "" }
     )
 }
@@ -55,7 +55,7 @@ pub fn get_staged_diff() -> Result<String, Box<dyn Error>> {
         .output()
         .expect("failed to execute process");
 
-    if output.stdout.len() == 0 {
+    if output.stdout.is_empty() {
         return Err(
             "No staged changes found. Make sure to stage your changes with `git add`.".into(),
         );

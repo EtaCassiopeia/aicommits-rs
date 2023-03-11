@@ -10,9 +10,9 @@ use ansi_term::Colour::Green;
 use ansi_term::Colour::Purple;
 use ansi_term::Colour::Red;
 use ansi_term::Colour::Yellow;
-use dialoguer::{console::Term, Select};
-use dialoguer::Confirm;
 use dialoguer::theme::ColorfulTheme;
+use dialoguer::Confirm;
+use dialoguer::{console::Term, Select};
 
 use config::Config;
 

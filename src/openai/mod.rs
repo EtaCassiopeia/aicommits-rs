@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use surf;
 use surf::Config;
 use surf::Url;
 use thiserror::Error;
@@ -95,7 +94,7 @@ where
         .config()
         .base_url
         .as_ref()
-        .ok_or(AppError::from(String::from("Base URL not set")))?;
+        .ok_or_else(|| AppError::from(String::from("Base URL not set")))?;
 
     let mut response = async_client
         .post(&format!("{}{}", base_url, endpoint))
@@ -146,7 +145,7 @@ pub async fn complete_prompt(
     async_client: &surf::Client,
     completion_request: CompletionRequest,
 ) -> Result<CompletionResponse, Box<dyn Error>> {
-    Ok(post(async_client, &format!("completions"), completion_request).await?)
+    post(async_client, "completions", completion_request).await
 }
 
 async fn create_completion(
@@ -172,8 +171,7 @@ async fn create_completion(
 fn sanitize_message(message: &str) -> String {
     message
         .trim()
-        .replace("\n", "")
-        .replace("\r", "")
+        .replace(['\n', '\r'], "")
         .replace(r"\w\.$", "$1")
 }
 
