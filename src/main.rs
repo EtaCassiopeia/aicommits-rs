@@ -9,8 +9,10 @@ use ansi_term::Colour::Cyan;
 use ansi_term::Colour::Green;
 use ansi_term::Colour::Purple;
 use ansi_term::Colour::Red;
-use dialoguer::theme::ColorfulTheme;
+use ansi_term::Colour::Yellow;
+use dialoguer::{console::Term, Select};
 use dialoguer::Confirm;
+use dialoguer::theme::ColorfulTheme;
 
 use config::Config;
 
@@ -84,6 +86,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .interact()
         .unwrap()
     {
+        let items = vec!["feat", "fix", "nano", "BREAKING-CHANGE"];
+
+        println!(
+            "{}",
+            Yellow
+                .bold()
+                .paint("Select the type of commit you want to make:")
+        );
+
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .items(&items)
+            .default(0)
+            .interact_on_opt(&Term::stderr())?;
+
+        let commit_message = format!("{}: {}", items[selection.unwrap()], commit_message);
+
         Command::new("git")
             .arg("commit")
             .arg("-m")
