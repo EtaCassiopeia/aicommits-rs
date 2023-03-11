@@ -154,7 +154,7 @@ async fn create_completion(
     prompt: &str,
 ) -> Result<CompletionResponse, Box<dyn Error>> {
     let completion_request: CompletionRequest = CompletionRequest {
-        model: String::from("code-davinci-002"),
+        model: String::from("text-davinci-003"),
         prompt: String::from(prompt),
         temperature: 0.7,
         max_tokens: 1500,
