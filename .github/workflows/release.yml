@@ -44,7 +44,11 @@ jobs:
             target: x86_64-pc-windows-msvc
             cross: false
           - build: aarch64-macos
+            # Intel macOS could compile Arm64 macOS binaries, the opposite is not possible.
+            # So running cargo build --target aarch64-apple-darwin on Intel macOS, will produce arm64 binary, not x86_64.
+            # TODO check installation of the aarch64 target in actions-rs/toolchain (which enables Cargo to actually compile for that architecture)
             os: macos-latest
+            architecture: x64
             rust: stable
             target: aarch64-apple-darwin
         # - build: x86_64-win-gnu
