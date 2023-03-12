@@ -11,8 +11,8 @@ on:
 env:
   BIN_NAME: aicommits-rs
   PROJECT_NAME: aicommits-rs
-  REPO_NAME: EtaCassiopeia/aicommits-rs
-  BREW_TAP: EtaCassiopeia/homebrew-tap
+  REPO_NAME: etacassiopeia/aicommits-rs
+  BREW_TAP: etacassiopeia/homebrew-tap
 
 jobs:
   dist:
@@ -179,6 +179,7 @@ jobs:
           file: dist/*
           file_glob: true
           tag: ${{ steps.tagname.outputs.val }}
+          #tag: ${{ github.ref }}
           overwrite: true
 
       - name: Extract version
