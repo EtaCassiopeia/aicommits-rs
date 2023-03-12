@@ -12,7 +12,7 @@ env:
   BIN_NAME: aicommits-rs
   PROJECT_NAME: aicommits-rs
   REPO_NAME: EtaCassiopeia/aicommits-rs
-  BREW_TAP: jondot/homebrew-tap
+  BREW_TAP: EtaCassiopeia/aicommits-rs
 
 jobs:
   dist:
