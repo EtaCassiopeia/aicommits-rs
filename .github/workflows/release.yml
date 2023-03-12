@@ -175,6 +175,8 @@ jobs:
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
+          # Go to https://github.com/EtaCassiopeia/aicommits-rs/settings/actions and in Workflow Permissions section give actions Read and Write permissions. That provides your token with rights to modify your repo.
+          # https://stackoverflow.com/questions/70435286/resource-not-accessible-by-integration-on-github-post-repos-owner-repo-ac
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: dist/*
           file_glob: true
@@ -189,7 +191,7 @@ jobs:
 
       - uses: mislav/bump-homebrew-formula-action@v1
         with:
-          formula-path: ${{env.PROJECT_NAME}}.rb
+          formula-path: Formula/${{env.PROJECT_NAME}}.rb
           homebrew-tap: ${{ env.BREW_TAP }}
           download-url: "https://github.com/${{ env.REPO_NAME }}/releases/download/${{ steps.extract-version.outputs.tag-name }}/${{env.PROJECT_NAME}}-${{ steps.extract-version.outputs.tag-name }}-x86_64-macos.tar.xz"
           commit-message: updating formula for ${{ env.PROJECT_NAME }}
