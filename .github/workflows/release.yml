@@ -12,7 +12,7 @@ env:
   BIN_NAME: aicommits-rs
   PROJECT_NAME: aicommits-rs
   REPO_NAME: EtaCassiopeia/aicommits-rs
-  BREW_TAP: EtaCassiopeia/aicommits-rs
+  BREW_TAP: EtaCassiopeia/homebrew-tap
 
 jobs:
   dist:
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false # don't fail other jobs if one fails
       matrix:
-        build: [x86_64-linux, aarch64-linux, x86_64-macos, x86_64-windows, aarch64-macos] #, x86_64-win-gnu, win32-msvc
+        build: [x86_64-linux, aarch64-linux, x86_64-macos, x86_64-windows] #, aarch64-macos, x86_64-win-gnu, win32-msvc
         include:
           - build: x86_64-linux
             os: ubuntu-20.04
@@ -43,14 +43,14 @@ jobs:
             rust: stable
             target: x86_64-pc-windows-msvc
             cross: false
-          - build: aarch64-macos
-            # Intel macOS could compile Arm64 macOS binaries, the opposite is not possible.
-            # So running cargo build --target aarch64-apple-darwin on Intel macOS, will produce arm64 binary, not x86_64.
-            # TODO check installation of the aarch64 target in actions-rs/toolchain (which enables Cargo to actually compile for that architecture)
-            os: macos-latest
-            architecture: x64
-            rust: stable
-            target: aarch64-apple-darwin
+#          - build: aarch64-macos
+#            # Intel macOS could compile Arm64 macOS binaries, the opposite is not possible.
+#            # So running cargo build --target aarch64-apple-darwin on Intel macOS, will produce arm64 binary, not x86_64.
+#            # TODO check installation of the aarch64 target in actions-rs/toolchain (which enables Cargo to actually compile for that architecture)
+#            os: macos-latest
+#            architecture: x64
+#            rust: stable
+#            target: aarch64-apple-darwin
         # - build: x86_64-win-gnu
         #   os: windows-2019
         #   rust: stable-x86_64-gnu

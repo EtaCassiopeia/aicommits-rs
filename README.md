@@ -13,6 +13,8 @@ A CLI that writes your git commit messages for you with AI. This project was ins
 
 ## Installation
 
+### Using Cargo
+
 1. Install Rust and Cargo. Then run:
 
 ```bash
@@ -26,6 +28,21 @@ cargo install aicommits-rs
 
 ```bash
 export OPENAI_API_KEY=<your_api_key>
+```
+
+### Homebrew (Mac Only)
+
+Run the following command to install the latest version of the CLI tool:
+
+```bash
+brew install EtaCassiopeia/tap/aicommits-rs
+```
+
+### Linux
+run the following command to install the latest version of the CLI tool:
+
+```bash
+curl -L //TBD
 ```
 
 ## Usage
