@@ -27,6 +27,7 @@ thiserror = "1.0.39"
 ansi_term = "0.12.1"
 dialoguer = "0.10.3"
 spinners-rs = "2.3.0"
+openssl = { version = "0.9.80", features = ["vendored"] }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [[bin]]
