@@ -189,7 +189,7 @@ jobs:
         run: |
           printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
 
-      - uses: mislav/bump-homebrew-formula-action@v1
+      - uses: mislav/bump-homebrew-formula-action@v2
         with:
           formula-path: Formula/${{env.PROJECT_NAME}}.rb
           homebrew-tap: ${{ env.BREW_TAP }}
@@ -222,8 +222,8 @@ jobs:
       - name: Install ${{ matrix.rust }} toolchain
         uses: actions-rs/toolchain@v1
         with:
+          toolchain: stable
           profile: minimal
-          toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
       - run: cargo publish --token ${CRATES_TOKEN}
