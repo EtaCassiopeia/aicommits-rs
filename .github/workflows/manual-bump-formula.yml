@@ -1,0 +1,27 @@
+on:
+  workflow_dispatch:
+    inputs:
+      tag-name:
+        description: 'The git tag name to bump the formula to'
+        required: true
+env:
+  BIN_NAME: aicommits-rs
+  PROJECT_NAME: aicommits-rs
+  REPO_NAME: etacassiopeia/aicommits-rs
+  BREW_TAP: etacassiopeia/homebrew-tap
+
+jobs:
+  homebrew:
+    name: Bump Homebrew formula
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mislav/bump-homebrew-formula-action@v2
+        with:
+          formula-name: ${{ env.PROJECT_NAME }}
+          tag-name: ${{ github.event.inputs.tag-name }}
+          formula-path: Formula/${{env.PROJECT_NAME}}.rb
+          homebrew-tap: ${{ env.BREW_TAP }}
+          base-branch: master
+          download-url: "https://github.com/${{ env.REPO_NAME }}/releases/download/${{ github.event.inputs.tag-name }}/${{env.PROJECT_NAME}}-${{ github.event.inputs.tag-name }}-x86_64-macos.tar.xz"
+        env:
+          COMMITTER_TOKEN: ${{ secrets.COMMITTER_TOKEN }}

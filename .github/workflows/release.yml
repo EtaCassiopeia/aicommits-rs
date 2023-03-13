@@ -190,9 +190,12 @@ jobs:
           printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
 
       - uses: mislav/bump-homebrew-formula-action@v2
+        if: "!contains(github.ref, '-')" # skip prereleases
         with:
+          formula-name: ${{ env.PROJECT_NAME }}
           formula-path: Formula/${{env.PROJECT_NAME}}.rb
           homebrew-tap: ${{ env.BREW_TAP }}
+          base-branch: master
           download-url: "https://github.com/${{ env.REPO_NAME }}/releases/download/${{ steps.extract-version.outputs.tag-name }}/${{env.PROJECT_NAME}}-${{ steps.extract-version.outputs.tag-name }}-x86_64-macos.tar.xz"
           commit-message: updating formula for ${{ env.PROJECT_NAME }}
         env:
