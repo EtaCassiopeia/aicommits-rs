@@ -1,114 +1,130 @@
-use std::error::Error;
-use std::process;
-use std::process::Command;
-use std::string::String;
+use std::{error::Error, process::Command, string::String};
 
-use ansi_term::Color::White;
-use ansi_term::Colour::Black;
-use ansi_term::Colour::Cyan;
-use ansi_term::Colour::Green;
-use ansi_term::Colour::Purple;
-use ansi_term::Colour::Red;
-use ansi_term::Colour::Yellow;
-use dialoguer::theme::ColorfulTheme;
-use dialoguer::Confirm;
-use dialoguer::{console::Term, Select};
+use ansi_term::{
+    Color::White,
+    Colour::{Black, Cyan, Green, Purple, Red, Yellow},
+};
+use dialoguer::console::Term;
+use dialoguer::{theme::ColorfulTheme, Confirm, Select};
+use spinners_rs::{Spinner, Spinners};
 
-use config::Config;
+use crate::{
+    config::Config,
+    git::{get_staged_files, StagedFiles},
+    openai::{GitCommitMessageGenerator, OpenAiClient},
+};
 
 mod config;
 mod git;
 mod openai;
 
-fn handle_error<T>(result: Result<T, Box<dyn Error>>) -> T {
-    match result {
-        Ok(value) => value,
-        Err(err) => {
-            eprintln!(
-                "\n\n{} {}",
-                Red.bold().paint("✘"),
-                Purple.bold().paint(err.to_string())
-            );
-            process::exit(1);
+//let result = handle_error!(some_function_that_returns_result());
+macro_rules! handle_error {
+    ($result:expr) => {
+        match $result {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!(
+                    "\n\n{} {}",
+                    Red.bold().paint("✘"),
+                    Purple.bold().paint(err.to_string())
+                );
+                std::process::exit(1);
+            }
         }
+    };
+}
+
+pub trait PostfixHandleError<T> {
+    //TODO Is there a way to make this unary postfix operator? (e.g. result! instead of result.handle_error())
+    fn handle_error(self) -> T;
+}
+
+impl<T> PostfixHandleError<T> for Result<T, Box<dyn Error>> {
+    fn handle_error(self) -> T {
+        handle_error!(self)
     }
 }
 
-fn join_vec_indented<S: ToString>(v: Vec<S>) -> String {
-    let mut result = String::new();
-    for item in v.iter() {
-        result.push_str(&format!("    {}\n", item.to_string()));
+struct AICommits {
+    git_commit_message_generator: GitCommitMessageGenerator,
+    staged_files: StagedFiles,
+}
+
+impl AICommits {
+    fn new(client: OpenAiClient) -> Result<Self, Box<dyn Error>> {
+        let git_commit_message_generator = GitCommitMessageGenerator::new(client);
+        let staged_files = get_staged_files()?;
+        println!(
+            "{}",
+            White.bold().paint(staged_files.get_detected_message())
+        );
+        println!(
+            "{}",
+            Green.bold().paint(join_vec_indented(&staged_files.files))
+        );
+        Ok(Self {
+            git_commit_message_generator,
+            staged_files,
+        })
     }
-    result
+
+    fn use_commit_message(&self, commit_message: String) -> Result<(), Box<dyn Error>> {
+        let message_prompt = format!(
+            "{}\n{}",
+            "Use this commit message?",
+            Green.bold().paint(commit_message.clone())
+        );
+        if Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt(message_prompt)
+            .default(true)
+            .show_default(false)
+            .wait_for_newline(false)
+            .interact()?
+        {
+            let items = ["feat", "fix", "nano", "BREAKING-CHANGE"];
+            println!(
+                "{}",
+                Yellow
+                    .bold()
+                    .paint("Select the type of commit you want to make:")
+            );
+            let selection = Select::with_theme(&ColorfulTheme::default())
+                .items(&items)
+                .default(0)
+                .interact_on_opt(&Term::stderr())?;
+            let commit_message = format!("{}: {}", items[selection.unwrap()], commit_message);
+            Command::new("git")
+                .arg("commit")
+                .arg("-m")
+                .arg(commit_message)
+                .status()?;
+        }
+        Ok(())
+    }
+}
+
+fn join_vec_indented<S: ToString>(v: &[S]) -> String {
+    v.iter()
+        .map(|item| format!("    {}\n", item.to_string()))
+        .collect()
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     println!("{}", Black.on(Cyan).paint("aicommits-rs"));
-
-    let config: Config = handle_error(Config::new());
-
-    let base_url = String::from("https://api.openai.com/v1/");
-
-    let client = openai::async_client(&config.openai_api_key, &base_url)?;
-
-    let staged_files: Vec<String> = handle_error(git::get_staged_files());
-
-    println!(
-        "{}",
-        White.bold().paint(git::get_detected_message(&staged_files))
-    );
-    println!("{}", Green.bold().paint(join_vec_indented(staged_files)));
-
-    let staged_diff: String = git::get_staged_diff()?;
-
-    let mut spinner = spinners_rs::Spinner::new(
-        spinners_rs::Spinners::Aesthetic,
-        "The AI is analyzing your changes...",
-    );
-
+    let config = Config::new()?;
+    let base_url = "https://api.openai.com/v1/".to_string();
+    let client = OpenAiClient::new(&config.openai_api_key, &base_url)?;
+    let ai_commits = AICommits::new(client)?;
+    let mut spinner = Spinner::new(Spinners::Aesthetic, "The AI is analyzing your changes...");
     spinner.start();
-
-    let commit_message: String =
-        handle_error(openai::generate_commit_message(&client, &staged_diff).await);
-
+    let commit_message = (ai_commits
+        .git_commit_message_generator
+        .generate_commit_message(&ai_commits.staged_files.diff)
+        .await)
+        .handle_error();
     spinner.stop_with_message("\n✓ Changes analyzed\n\n");
-
-    if Confirm::with_theme(&ColorfulTheme::default())
-        .with_prompt(format!(
-            "{}\n{}",
-            "Use this commit message?",
-            Green.bold().paint(commit_message.clone())
-        ))
-        .default(true)
-        .show_default(false)
-        .wait_for_newline(false)
-        .interact()
-        .unwrap()
-    {
-        let items = vec!["feat", "fix", "nano", "BREAKING-CHANGE"];
-
-        println!(
-            "{}",
-            Yellow
-                .bold()
-                .paint("Select the type of commit you want to make:")
-        );
-
-        let selection = Select::with_theme(&ColorfulTheme::default())
-            .items(&items)
-            .default(0)
-            .interact_on_opt(&Term::stderr())?;
-
-        let commit_message = format!("{}: {}", items[selection.unwrap()], commit_message);
-
-        Command::new("git")
-            .arg("commit")
-            .arg("-m")
-            .arg(commit_message)
-            .status()
-            .expect("failed to execute process");
-    }
-
+    ai_commits.use_commit_message(commit_message)?;
     Ok(())
 }

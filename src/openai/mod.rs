@@ -1,6 +1,15 @@
-use serde::{Deserialize, Serialize};
 use std::error::Error;
+
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use surf::middleware::Middleware;
+use surf::middleware::Next;
+use surf::utils::async_trait;
+use surf::Client;
 use surf::Config;
+use surf::Request;
+use surf::Response;
+use surf::StatusCode;
 use surf::Url;
 use thiserror::Error;
 
@@ -18,17 +27,17 @@ impl BearerToken {
     }
 }
 
-#[surf::utils::async_trait]
-impl surf::middleware::Middleware for BearerToken {
+#[async_trait]
+impl Middleware for BearerToken {
     async fn handle(
         &self,
-        mut req: surf::Request,
-        client: surf::Client,
-        next: surf::middleware::Next<'_>,
-    ) -> surf::Result<surf::Response> {
+        mut req: Request,
+        client: Client,
+        next: Next<'_>,
+    ) -> surf::Result<Response> {
         log::debug!("Request: {:?}", req);
         req.insert_header("Authorization", format!("Bearer {}", self.token));
-        let response: surf::Response = next.run(req, client).await?;
+        let response: Response = next.run(req, client).await?;
         log::debug!("Response: {:?}", response);
         Ok(response)
     }
@@ -50,6 +59,10 @@ pub struct ErrorMessage {
 pub enum AppError {
     #[error("API returned an Error: {}", .0.message)]
     APIError(ErrorMessage),
+    #[error("Base URL not set")]
+    BaseUrlNotSet,
+    #[error("The diff is too large for the OpenAI API. Try reducing the number of staged changes, or write your own commit message.")]
+    DiffTooLarge,
 }
 
 impl From<ErrorMessage> for AppError {
@@ -73,42 +86,71 @@ impl From<String> for AppError {
     }
 }
 
-pub fn async_client(token: &str, base_url: &str) -> Result<surf::Client, Box<dyn Error>> {
-    let client: surf::Client = Config::new()
-        .set_base_url(Url::parse(base_url).expect("Static string should parse"))
-        .try_into()?;
-
-    Ok(client.with(BearerToken::new(token)))
+pub struct OpenAiClient {
+    client: Client,
 }
 
-async fn post<B, R>(
-    async_client: &surf::Client,
-    endpoint: &str,
-    body: B,
-) -> Result<R, Box<dyn Error>>
-where
-    B: serde::ser::Serialize,
-    R: serde::de::DeserializeOwned,
-{
-    let base_url = async_client
-        .config()
-        .base_url
-        .as_ref()
-        .ok_or_else(|| AppError::from(String::from("Base URL not set")))?;
+impl OpenAiClient {
+    pub fn new(token: &str, base_url: &str) -> Result<Self, Box<dyn Error>> {
+        let client: Client = Config::new()
+            .set_base_url(Url::parse(base_url).unwrap())
+            .try_into()?;
+        Ok(Self {
+            client: client.with(BearerToken::new(token)),
+        })
+    }
 
-    let mut response = async_client
-        .post(&format!("{}{}", base_url, endpoint))
-        .body(surf::Body::from_json(&body)?)
-        .await?;
-    match response.status() {
-        surf::StatusCode::Ok => Ok(response.body_json::<R>().await?),
-        _ => Err(Box::new(AppError::APIError(
-            response
-                .body_json::<ErrorWrapper>()
-                .await
-                .expect("The API has returned something funky")
-                .error,
-        ))),
+    async fn post<B, R>(&self, endpoint: &str, body: B) -> Result<R, Box<dyn Error>>
+    where
+        B: Serialize,
+        R: DeserializeOwned,
+    {
+        let base_url = self
+            .client
+            .config()
+            .base_url
+            .as_ref()
+            .ok_or(AppError::BaseUrlNotSet)?;
+
+        let mut response = self
+            .client
+            .post(&format!("{}{}", base_url, endpoint))
+            .body(surf::Body::from_json(&body)?)
+            .await?;
+        match response.status() {
+            StatusCode::Ok => Ok(response.body_json::<R>().await?),
+            _ => Err(Box::new(AppError::APIError(
+                response
+                    .body_json::<ErrorWrapper>()
+                    .await
+                    .expect("The API has returned something funky")
+                    .error,
+            ))),
+        }
+    }
+
+    async fn complete_prompt(
+        &self,
+        completion_request: CompletionRequest,
+    ) -> Result<CompletionResponse, Box<dyn Error>> {
+        self.post("completions", completion_request).await
+    }
+
+    async fn create_completion(&self, prompt: &str) -> Result<CompletionResponse, Box<dyn Error>> {
+        let completion_request: CompletionRequest = CompletionRequest {
+            model: String::from("text-davinci-003"),
+            prompt: String::from(prompt),
+            temperature: 0.7,
+            max_tokens: 1500,
+            top_p: 1.0,
+            frequency_penalty: 0.0,
+            presence_penalty: 0.0,
+            stream: false,
+            n: 1,
+        };
+
+        let completion: CompletionResponse = self.complete_prompt(completion_request).await?;
+        Ok(completion)
     }
 }
 
@@ -141,33 +183,6 @@ pub struct Choice {
     pub finish_reason: String,
 }
 
-pub async fn complete_prompt(
-    async_client: &surf::Client,
-    completion_request: CompletionRequest,
-) -> Result<CompletionResponse, Box<dyn Error>> {
-    post(async_client, "completions", completion_request).await
-}
-
-async fn create_completion(
-    async_client: &surf::Client,
-    prompt: &str,
-) -> Result<CompletionResponse, Box<dyn Error>> {
-    let completion_request: CompletionRequest = CompletionRequest {
-        model: String::from("text-davinci-003"),
-        prompt: String::from(prompt),
-        temperature: 0.7,
-        max_tokens: 1500,
-        top_p: 1.0,
-        frequency_penalty: 0.0,
-        presence_penalty: 0.0,
-        stream: false,
-        n: 1,
-    };
-
-    let completion: CompletionResponse = complete_prompt(async_client, completion_request).await?;
-    Ok(completion)
-}
-
 fn sanitize_message(message: &str) -> String {
     message
         .trim()
@@ -175,18 +190,25 @@ fn sanitize_message(message: &str) -> String {
         .replace(r"\w\.$", "$1")
 }
 
-pub async fn generate_commit_message(
-    async_client: &surf::Client,
-    diff: &str,
-) -> Result<String, Box<dyn Error>> {
-    let prompt: &str = &format!("{}\n{}", PROMPT, diff);
+pub struct GitCommitMessageGenerator {
+    openai_client: OpenAiClient,
+}
 
-    if prompt.len() > 4000 {
-        return Err("The diff is too large for the OpenAI API. Try reducing the number of staged changes, or write your own commit message.".into());
+impl GitCommitMessageGenerator {
+    pub fn new(openai_client: OpenAiClient) -> Self {
+        Self { openai_client }
     }
 
-    let completion: CompletionResponse = create_completion(async_client, prompt).await?;
+    pub async fn generate_commit_message(&self, diff: &str) -> Result<String, Box<dyn Error>> {
+        let prompt: &str = &format!("{}\n{}", PROMPT, diff);
 
-    let message: String = sanitize_message(&completion.choices[0].text);
-    Ok(message)
+        if prompt.len() > 4000 {
+            return Err(AppError::DiffTooLarge.into());
+        }
+
+        let completion: CompletionResponse = self.openai_client.create_completion(prompt).await?;
+
+        let message: String = sanitize_message(&completion.choices[0].text);
+        Ok(message)
+    }
 }
